@@ -417,6 +417,7 @@ OPTIONS
            classes in the given jar file will be translated. No sources
            needed. (Conversely: --no-dependencies)           See also infer-capture(1).
 
+
        --differential-filter-files string
            Specify the file containing the list of source files for which a
            differential report is desired. Source files should be specified
@@ -760,6 +761,14 @@ OPTIONS
        --global-tenv
            Activates: Print the global type environment. (Conversely:
            --no-global-tenv)           See also infer-debug(1).
+
+       --gradual
+           Activates: the gradual lifetime inference for C/C++.
+           (Conversely: --no-gradual)           See also infer-analyze(1).
+
+       --gradual-only
+           Activates: Enable --gradual and disable all other checkers
+           (Conversely: --no-gradual-only)           See also infer-analyze(1).
 
        --headers
            Activates: Analyze code in header files (Conversely: --no-headers)       

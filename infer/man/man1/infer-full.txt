@@ -761,6 +761,14 @@ OPTIONS
            Activates: Print the global type environment. (Conversely:
            --no-global-tenv)           See also infer-debug(1).
 
+       --gradual
+           Activates: the gradual lifetime inference checker for C/C++.
+           (Conversely: --no-gradual)           See also infer-analyze(1).
+
+       --gradual-only
+           Activates: Enable --gradual and disable all other checkers
+           (Conversely: --no-gradual-only)           See also infer-analyze(1).
+
        --headers
            Activates: Analyze code in header files (Conversely: --no-headers)       
     See also infer-capture(1).

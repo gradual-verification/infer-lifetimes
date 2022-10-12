@@ -147,6 +147,14 @@ OPTIONS
            Activates: Enable fragment-retains-view and disable all other
            checkers (Conversely: --no-fragment-retains-view-only)
 
+       --gradual
+           Activates: the gradual lifetime inference checker for C/C++.
+           (Conversely: --no-gradual)
+
+       --gradual-only
+           Activates: Enable --gradual and disable all other checkers
+           (Conversely: --no-gradual-only)
+
        --help
            Show this manual
 
