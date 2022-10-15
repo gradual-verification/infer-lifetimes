@@ -24,6 +24,7 @@ type t =
   | Linters
   | LithoRequiredProps
   | Liveness
+  | LifetimeInference
   | LoopHoisting
   | NullsafeDeprecated
   | ParameterNotNullChecked

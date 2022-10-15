@@ -25,6 +25,7 @@ type t =
   | Linters
   | LithoRequiredProps
   | Liveness
+  | LifetimeInference
   | LoopHoisting
   | NullsafeDeprecated
   | ParameterNotNullChecked
@@ -279,6 +280,14 @@ let config_unsafe checker =
       ; cli_flags= Some {deprecated= []; show_in_help= true}
       ; enabled_by_default= true
       ; activates= [] }
+    | LifetimeInference ->
+    { id= "lifetime-inference"
+    ; kind= UserFacing {title= "Lifetime Inference"; markdown_body= ""}
+    ; support= mk_support_func ~clang:Support ()
+    ; short_documentation= "Infers Rust-like lifetime contracts for functions."
+    ; cli_flags= Some {deprecated= []; show_in_help= true}
+    ; enabled_by_default= true
+    ; activates= [] }
   | LoopHoisting ->
       { id= "loop-hoisting"
       ; kind=

@@ -761,14 +761,6 @@ OPTIONS
            Activates: Print the global type environment. (Conversely:
            --no-global-tenv)           See also infer-debug(1).
 
-       --gradual
-           Activates: the gradual lifetime inference checker for C/C++.
-           (Conversely: --no-gradual)           See also infer-analyze(1).
-
-       --gradual-only
-           Activates: Enable --gradual and disable all other checkers
-           (Conversely: --no-gradual-only)           See also infer-analyze(1).
-
        --headers
            Activates: Analyze code in header files (Conversely: --no-headers)       
     See also infer-capture(1).
@@ -874,6 +866,13 @@ OPTIONS
        --kotlin-capture
            Activates: Enable Kotlin capture (experimental, do not use).
            (Conversely: --no-kotlin-capture)           See also infer-capture(1).
+
+       --lifetime-inference
+           Infer Rust-like lifetime annotations for functions.           See also infer-analyze(1).
+
+       --lifetime-inference-only
+           Activates: Enable lifetime inference and disable all other checkers
+           (Conversely: --no-lifetime-inference-only)           See also infer-analyze(1).
 
        --no-linters
            Deactivates: checker linters: Declarative linting framework over
