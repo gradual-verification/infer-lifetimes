@@ -7,65 +7,38 @@
 
  open! IStd
  module F = Format
- module L = Logging
  
  module TransferFunctions (CFG : ProcCfg.S) = struct
    module CFG = CFG
-   module Domain = LifetimeInferenceDomain
+   module Domain = MayPointsToDomain
  
-   type analysis_data = LifetimeInferenceDomain.t InterproceduralAnalysis.t
- 
-   let is_closeable_typename tenv typename =
-     let is_closable_interface typename _ =
-       match Typ.Name.name typename with
-       | "java.io.AutoCloseable" | "java.io.Closeable" ->
-           true
-       | _ ->
-           false
-     in
-     PatternMatch.supertype_exists tenv is_closable_interface typename
- 
- 
-   let is_closeable_procname tenv procname =
-     match procname with
-     | Procname.Java java_procname ->
-         is_closeable_typename tenv (Procname.Java.get_class_type_name java_procname)
-     | _ ->
-         false
- 
- 
-   let _acquires_resource tenv procname =
-     (* We assume all constructors of a subclass of Closeable acquire a resource *)
-     Procname.is_constructor procname && is_closeable_procname tenv procname
- 
- 
-   let _releases_resource tenv procname =
-     (* We assume the close method of a Closeable releases all of its resources *)
-     String.equal "close" (Procname.get_method procname) && is_closeable_procname tenv procname
- 
- 
+   type analysis_data = MayPointsToDomain.t InterproceduralAnalysis.t
+
+
    (** Take an abstract state and instruction, produce a new abstract state *)
-   let exec_instr (astate : LifetimeInferenceDomain.t)
+   let exec_instr (astate : MayPointsToDomain.t)
        {InterproceduralAnalysis.proc_desc= _; tenv= _; analyze_dependency= _; _} _ _
        (instr : HilInstr.t) =
      match instr with
      | Call (_return_opt, Direct _callee_procname, _actuals, _, _loc) ->
          (* function call [return_opt] := invoke [callee_procname]([actuals]) *)
          astate
-     | Assign (_lhs_access_path, _rhs_exp, _loc) ->
+     | Assign (lhs_access_path, rhs_exp, _loc) ->
          (* an assignment [lhs_access_path] := [rhs_exp] *)
-         astate
+        let lhs_pts_to_set = MayPointsToDomain.get_lhs_locations astate lhs_access_path in
+        let rhs_pts_to_set = MayPointsToDomain.get_rhs_locations astate rhs_exp in
+        MayPointsToDomain.set_pointing_to astate lhs_pts_to_set rhs_pts_to_set
+
      | Assume (_assume_exp, _, _, _loc) ->
          (* a conditional assume([assume_exp]). blocks if [assume_exp] evaluates to false *)
          astate
      | Call (_, Indirect _, _, _, _) ->
-         (* This should never happen in Java. Fail if it does. *)
-         L.(die InternalError) "Unexpected indirect call %a" HilInstr.pp instr
+         astate
      | Metadata _ ->
          astate
  
  
-   let pp_session_name _node fmt = F.pp_print_string fmt "resource leaks"
+   let pp_session_name _node fmt = F.pp_print_string fmt "may-points-to leaks"
  end
  
  (** 5(a) Type of CFG to analyze--Exceptional to follow exceptional control-flow edges, Normal to
@@ -80,14 +53,14 @@
    let change_me = false in
    if change_me then
      let last_loc = Procdesc.Node.get_loc (Procdesc.get_exit_node proc_desc) in
-     let message = F.asprintf "Leaked %a resource(s)" LifetimeInferenceDomain.pp post in
-     Reporting.log_issue proc_desc err_log ~loc:last_loc ResourceLeakLabExercise
+     let message = F.asprintf "Leaked %a resource(s)" MayPointsToDomain.pp post in
+     Reporting.log_issue proc_desc err_log ~loc:last_loc LifetimeInference
        IssueType.lab_resource_leak message
  
  
  (** Main function into the checker--registered in RegisterCheckers *)
  let checker ({InterproceduralAnalysis.proc_desc} as analysis_data) =
-   let result = Analyzer.compute_post analysis_data ~initial:LifetimeInferenceDomain.initial proc_desc in
+   let result = Analyzer.compute_post analysis_data ~initial:(MayPointsToDomain.initial proc_desc) proc_desc in
    Option.iter result ~f:(fun post -> report_if_leak analysis_data post) ;
    result
  
