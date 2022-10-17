@@ -281,7 +281,7 @@ let config_unsafe checker =
       ; enabled_by_default= true
       ; activates= [] }
     | LifetimeInference ->
-    { id= "lifetime-inference"
+    { id= "lifetimes"
     ; kind= UserFacing {title= "Lifetime Inference"; markdown_body= ""}
     ; support= mk_support_func ~clang:Support ()
     ; short_documentation= "Infers Rust-like lifetime contracts for functions."
