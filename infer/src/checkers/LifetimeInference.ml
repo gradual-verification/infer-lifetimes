@@ -16,7 +16,7 @@ module TransferFunctions (CFG : ProcCfg.S) = struct
 
   (** Take an abstract state and instruction, produce a new abstract state *)
   let exec_instr (astate : MayPointsToDomain.t)
-      {InterproceduralAnalysis.proc_desc= _; tenv= _; analyze_dependency= _; _} _ _
+      {InterproceduralAnalysis.proc_desc= _; tenv= tenv; analyze_dependency= _; _} _ _
       (instr : HilInstr.t) =
     match instr with
     | Call (_return_opt, Direct _callee_procname, _actuals, _, _loc) ->
@@ -27,8 +27,8 @@ module TransferFunctions (CFG : ProcCfg.S) = struct
         let rhs_acc_opt = MayPointsToDomain.find_inner_access_expr rhs_exp in
         match rhs_acc_opt with
         | Some acc -> (
-            let lhs_pts_to_set = MayPointsToDomain.get_lhs_locations astate lhs_access_path in
-            let rhs_pts_to_set = MayPointsToDomain.get_rhs_locations astate acc in
+            let lhs_pts_to_set = MayPointsToDomain.get_lhs_locations astate tenv lhs_access_path in
+            let rhs_pts_to_set = MayPointsToDomain.get_rhs_locations astate tenv acc in
             match (lhs_pts_to_set, rhs_pts_to_set) with
             | Some l, Some r ->
                 MayPointsToDomain.set_pointing_to astate l r
@@ -43,7 +43,6 @@ module TransferFunctions (CFG : ProcCfg.S) = struct
         astate
     | Metadata _ ->
         astate
-
 
   let pp_session_name _node fmt = F.pp_print_string fmt "may-points-to"
 end
@@ -66,9 +65,9 @@ let report_if_leak {InterproceduralAnalysis.proc_desc; err_log; _} post =
 
 
 (** Main function into the checker--registered in RegisterCheckers *)
-let checker ({InterproceduralAnalysis.proc_desc} as analysis_data) =
+let checker ({InterproceduralAnalysis.proc_desc; tenv} as analysis_data) =
   let result =
-    Analyzer.compute_post analysis_data ~initial:(MayPointsToDomain.initial proc_desc) proc_desc
+    Analyzer.compute_post analysis_data ~initial:(MayPointsToDomain.initial proc_desc tenv) proc_desc
   in
   Option.iter result ~f:(fun post -> report_if_leak analysis_data post) ;
   result
