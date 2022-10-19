@@ -22,11 +22,11 @@ type t =
   | ImmutableCast
   | Impurity
   | InefficientKeysetIterator
+  | LifetimeInference
   | Linters
   | LithoRequiredProps
   | Liveness
   | LoopHoisting
-  | MayPointsTo
   | NullsafeDeprecated
   | ParameterNotNullChecked
   | PrintfArgs
@@ -280,9 +280,9 @@ let config_unsafe checker =
       ; cli_flags= Some {deprecated= []; show_in_help= true}
       ; enabled_by_default= true
       ; activates= [] }
-    | MayPointsTo ->
-    { id= "may-pts-to"
-    ; kind= UserFacing {title= "May-points-to analysis"; markdown_body= ""}
+    | LifetimeInference ->
+    { id= "lifetimes"
+    ; kind= UserFacing {title= "Lifetime inference"; markdown_body= ""}
     ; support= mk_support_func ~clang:Support ()
     ; short_documentation= ""
     ; cli_flags= Some {deprecated= []; show_in_help= true}

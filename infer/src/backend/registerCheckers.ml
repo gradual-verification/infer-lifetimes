@@ -169,7 +169,7 @@ let all_checkers =
          [(impurity, Java); (impurity, Clang)] ) }
   ; {checker= PrintfArgs; callbacks= [(intraprocedural PrintfArgs.checker, Java)]}
   ; {checker= Liveness; callbacks= [(intraprocedural Liveness.checker, Clang)]}
-  ; {checker= MayPointsTo; callbacks= [(interprocedural Payloads.Fields.may_points_to MayPointsTo.checker, Clang)]}
+  ; {checker= LifetimeInference; callbacks= [(interprocedural Payloads.Fields.may_points_to LifetimeInference.checker, Clang)]}
   ; { checker= InefficientKeysetIterator
     ; callbacks= [(intraprocedural InefficientKeysetIterator.checker, Java)] }
   ; { checker= ImmutableCast

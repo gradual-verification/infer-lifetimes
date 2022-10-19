@@ -786,7 +786,8 @@ let javascript_injection =
 let lab_resource_leak =
   register ~id:"LAB_RESOURCE_LEAK" Error ResourceLeakLabExercise ~user_documentation:"Toy issue."
 
-
+let lifetime_error =
+  register ~id:"LIFETIME ERROR" Error LifetimeInference ~user_documentation:"A lifetime ended prematurely."
 let dotnet_resource_leak =
   register ~id:"DOTNET_RESOURCE_LEAK" Error DOTNETResourceLeaks
     ~user_documentation:"Resource leak checker for .NET."

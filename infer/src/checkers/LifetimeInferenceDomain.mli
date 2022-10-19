@@ -8,10 +8,10 @@
 open! IStd
 
 type indirection = int [@@deriving compare]
-type varinfo = string * Typ.t [@@deriving compare]
+type varinfo = string * Typ.t * indirection [@@deriving compare]
 type abstract_location =
-  | Field of (abstract_location option * string)
-  | Variable of string
+  | Field of (abstract_location * varinfo)
+  | Variable of varinfo
   | HeapMemory of Typ.t option
 [@@deriving compare]
 
@@ -31,6 +31,6 @@ include AbstractDomain.S
 
 val initial : Procdesc.t -> Tenv.t -> t
 
-val set_pointing_to : t -> lhs:HilExp.access_expression -> rhs:HilExp.t -> t
+val set_pointing_to : t ->  Tenv.t -> lhs:HilExp.access_expression -> rhs:HilExp.t -> t
 
 type summary = t

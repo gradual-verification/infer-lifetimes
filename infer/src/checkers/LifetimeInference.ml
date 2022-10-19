@@ -10,13 +10,13 @@ module F = Format
 
 module TransferFunctions (CFG : ProcCfg.S) = struct
   module CFG = CFG
-  module Domain = MayPointsToDomain
+  module Domain = LifetimeInferenceDomain
 
-  type analysis_data = MayPointsToDomain.t InterproceduralAnalysis.t
+  type analysis_data = LifetimeInferenceDomain.t InterproceduralAnalysis.t
 
   (** Take an abstract state and instruction, produce a new abstract state *)
-  let exec_instr (astate : MayPointsToDomain.t)
-      {InterproceduralAnalysis.proc_desc= _; tenv= _; analyze_dependency= _; _} _ _
+  let exec_instr (astate : LifetimeInferenceDomain.t)
+      {InterproceduralAnalysis.proc_desc= _; tenv; analyze_dependency= _; _} _ _
       (instr : HilInstr.t) =
     match instr with
     | Call (_return_opt, Direct _callee_procname, _actuals, _, _loc) ->
@@ -24,7 +24,7 @@ module TransferFunctions (CFG : ProcCfg.S) = struct
         astate
     | Assign (lhs, rhs, _loc) ->
         (* an assignment [lhs_access_path] := [rhs_exp] *)
-        MayPointsToDomain.set_pointing_to astate ~lhs ~rhs
+        LifetimeInferenceDomain.set_pointing_to astate tenv ~lhs ~rhs
     | Assume (_assume_exp, _, _, _loc) ->
         (* a conditional assume([assume_exp]). blocks if [assume_exp] evaluates to false *)
         astate
@@ -33,7 +33,7 @@ module TransferFunctions (CFG : ProcCfg.S) = struct
     | Metadata _ ->
         astate
 
-  let pp_session_name _node fmt = F.pp_print_string fmt "may-points-to"
+  let pp_session_name _node fmt = F.pp_print_string fmt "lifetimes"
 end
 
 (** 5(a) Type of CFG to analyze--Exceptional to follow exceptional control-flow edges, Normal to
@@ -44,19 +44,13 @@ module CFG = ProcCfg.Normal
 module Analyzer = LowerHil.MakeAbstractInterpreter (TransferFunctions (CFG))
 
 (** Report an error when we have acquired more resources than we have released *)
-let report_if_leak {InterproceduralAnalysis.proc_desc; err_log; _} post =
-  let change_me = false in
-  if change_me then
-    let last_loc = Procdesc.Node.get_loc (Procdesc.get_exit_node proc_desc) in
-    let message = F.asprintf "Leaked %a resource(s)" MayPointsToDomain.pp post in
-    Reporting.log_issue proc_desc err_log ~loc:last_loc MayPointsTo
-      IssueType.lab_resource_leak message
+let report_annotation_or_error _ _post = ()
 
 
 (** Main function into the checker--registered in RegisterCheckers *)
 let checker ({InterproceduralAnalysis.proc_desc; tenv} as analysis_data) =
   let result =
-    Analyzer.compute_post analysis_data ~initial:(MayPointsToDomain.initial proc_desc tenv) proc_desc
+    Analyzer.compute_post analysis_data ~initial:(LifetimeInferenceDomain.initial proc_desc tenv) proc_desc
   in
-  Option.iter result ~f:(fun post -> report_if_leak analysis_data post) ;
+  Option.iter result ~f:(fun post -> report_annotation_or_error analysis_data post) ;
   result

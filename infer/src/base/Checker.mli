@@ -21,11 +21,11 @@ type t =
   | ImmutableCast
   | Impurity
   | InefficientKeysetIterator
+  | LifetimeInference
   | Linters
   | LithoRequiredProps
   | Liveness
   | LoopHoisting
-  | MayPointsTo
   | NullsafeDeprecated
   | ParameterNotNullChecked
   | PrintfArgs
