@@ -10,27 +10,21 @@ module F = Format
 
 module TransferFunctions (CFG : ProcCfg.S) = struct
   module CFG = CFG
-  module Domain = LifetimeInferenceDomain
+  module Domain = MayPointsToDomain
 
-  type analysis_data = LifetimeInferenceDomain.t InterproceduralAnalysis.t
+  type analysis_data = MayPointsToDomain.t InterproceduralAnalysis.t
 
   (** Take an abstract state and instruction, produce a new abstract state *)
-  let exec_instr (astate : LifetimeInferenceDomain.t)
+  let exec_instr (astate : MayPointsToDomain.t)
       {InterproceduralAnalysis.proc_desc= _; tenv= _; analyze_dependency= _; _} _ _
       (instr : HilInstr.t) =
     match instr with
     | Call (_return_opt, Direct _callee_procname, _actuals, _, _loc) ->
         (* function call [return_opt] := invoke [callee_procname]([actuals]) *)
         astate
-<<<<<<< HEAD:infer/src/checkers/MayPointsTo.ml
     | Assign (lhs, rhs, _loc) ->
         (* an assignment [lhs_access_path] := [rhs_exp] *)
         MayPointsToDomain.set_pointing_to astate ~lhs ~rhs
-=======
-    | Assign (_lhs_access_path, _rhs_exp, _loc) -> 
-        (* an assignment [lhs_access_path] := [rhs_exp] *)
-       astate
->>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9:infer/src/checkers/LifetimeInference.ml
     | Assume (_assume_exp, _, _, _loc) ->
         (* a conditional assume([assume_exp]). blocks if [assume_exp] evaluates to false *)
         astate
@@ -54,20 +48,15 @@ let report_if_leak {InterproceduralAnalysis.proc_desc; err_log; _} post =
   let change_me = false in
   if change_me then
     let last_loc = Procdesc.Node.get_loc (Procdesc.get_exit_node proc_desc) in
-<<<<<<< HEAD:infer/src/checkers/MayPointsTo.ml
     let message = F.asprintf "Leaked %a resource(s)" MayPointsToDomain.pp post in
     Reporting.log_issue proc_desc err_log ~loc:last_loc MayPointsTo
-=======
-    let message = F.asprintf "Leaked %a resource(s)" LifetimeInferenceDomain.pp post in
-    Reporting.log_issue proc_desc err_log ~loc:last_loc LifetimeInference
->>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9:infer/src/checkers/LifetimeInference.ml
       IssueType.lab_resource_leak message
 
 
 (** Main function into the checker--registered in RegisterCheckers *)
 let checker ({InterproceduralAnalysis.proc_desc; tenv} as analysis_data) =
   let result =
-    Analyzer.compute_post analysis_data ~initial:(LifetimeInferenceDomain.initial proc_desc tenv) proc_desc
+    Analyzer.compute_post analysis_data ~initial:(MayPointsToDomain.initial proc_desc tenv) proc_desc
   in
   Option.iter result ~f:(fun post -> report_if_leak analysis_data post) ;
   result

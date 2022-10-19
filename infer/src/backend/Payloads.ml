@@ -18,10 +18,6 @@ type t =
   ; disjunctive_demo: DisjunctiveDemo.domain option
   ; dotnet_resource_leaks: ResourceLeakCSDomain.summary option
   ; lab_resource_leaks: ResourceLeakDomain.summary option
-<<<<<<< HEAD
-=======
-  ; inferred_lifetimes: LifetimeInferenceDomain.summary option
->>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
   ; litho_required_props: LithoDomain.summary option
   ; may_points_to: MayPointsToDomain.summary option
   ; pulse: PulseSummary.t option
@@ -60,11 +56,7 @@ let fields =
     ~quandary:(fun f -> mk f "Quandary" QuandarySummary.pp)
     ~racerd:(fun f -> mk f "RacerD" RacerDDomain.pp_summary)
     ~lab_resource_leaks:(fun f -> mk f "Resource Leaks Lab" ResourceLeakDomain.pp)
-<<<<<<< HEAD
     ~may_points_to:(fun f -> mk f "May Points To" MayPointsToDomain.pp)
-=======
-    ~inferred_lifetimes:(fun f -> mk f "Lifetime Inference" LifetimeInferenceDomain.pp)
->>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
     ~dotnet_resource_leaks:(fun f -> mk f "DOTNET Resource Leaks" ResourceLeakCSDomain.Summary.pp)
     ~siof:(fun f -> mk f "Siof" SiofDomain.Summary.pp)
     ~simple_lineage:(fun f -> mk f "SimpleLineage" SimpleLineage.Summary.pp)

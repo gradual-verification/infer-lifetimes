@@ -8,13 +8,7 @@
 open! IStd
 
 type indirection = int [@@deriving compare]
-
-type varinfo =
-  | Named of (string * Typ.t)
-  | MaybeUntyped of (string * Typ.t option)
-  | Unnamed of (Typ.t * indirection) option
-[@@deriving compare]
-
+type varinfo = string * Typ.t [@@deriving compare]
 type abstract_location =
   | Field of (abstract_location option * string)
   | Variable of string
