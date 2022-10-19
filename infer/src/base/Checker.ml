@@ -25,8 +25,8 @@ type t =
   | Linters
   | LithoRequiredProps
   | Liveness
-  | LifetimeInference
   | LoopHoisting
+  | MayPointsTo
   | NullsafeDeprecated
   | ParameterNotNullChecked
   | PrintfArgs
@@ -280,11 +280,11 @@ let config_unsafe checker =
       ; cli_flags= Some {deprecated= []; show_in_help= true}
       ; enabled_by_default= true
       ; activates= [] }
-    | LifetimeInference ->
-    { id= "lifetimes"
-    ; kind= UserFacing {title= "Lifetime Inference"; markdown_body= ""}
+    | MayPointsTo ->
+    { id= "may-pts-to"
+    ; kind= UserFacing {title= "May-points-to analysis"; markdown_body= ""}
     ; support= mk_support_func ~clang:Support ()
-    ; short_documentation= "Infers Rust-like lifetime contracts for functions."
+    ; short_documentation= ""
     ; cli_flags= Some {deprecated= []; show_in_help= true}
     ; enabled_by_default= true
     ; activates= [] }

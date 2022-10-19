@@ -24,8 +24,8 @@ type t =
   | Linters
   | LithoRequiredProps
   | Liveness
-  | LifetimeInference
   | LoopHoisting
+  | MayPointsTo
   | NullsafeDeprecated
   | ParameterNotNullChecked
   | PrintfArgs

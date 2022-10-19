@@ -22,20 +22,9 @@ module TransferFunctions (CFG : ProcCfg.S) = struct
     | Call (_return_opt, Direct _callee_procname, _actuals, _, _loc) ->
         (* function call [return_opt] := invoke [callee_procname]([actuals]) *)
         astate
-    | Assign (lhs_access_path, rhs_exp, _loc) -> (
+    | Assign (lhs, rhs, _loc) ->
         (* an assignment [lhs_access_path] := [rhs_exp] *)
-        let rhs_acc_opt = MayPointsToDomain.find_inner_access_expr rhs_exp in
-        match rhs_acc_opt with
-        | Some acc -> (
-            let lhs_pts_to_set = MayPointsToDomain.get_lhs_locations astate lhs_access_path in
-            let rhs_pts_to_set = MayPointsToDomain.get_rhs_locations astate acc in
-            match (lhs_pts_to_set, rhs_pts_to_set) with
-            | Some l, Some r ->
-                MayPointsToDomain.set_pointing_to astate l r
-            | _ ->
-                astate )
-        | None ->
-            astate )
+        MayPointsToDomain.set_pointing_to astate ~lhs ~rhs
     | Assume (_assume_exp, _, _, _loc) ->
         (* a conditional assume([assume_exp]). blocks if [assume_exp] evaluates to false *)
         astate
@@ -61,7 +50,7 @@ let report_if_leak {InterproceduralAnalysis.proc_desc; err_log; _} post =
   if change_me then
     let last_loc = Procdesc.Node.get_loc (Procdesc.get_exit_node proc_desc) in
     let message = F.asprintf "Leaked %a resource(s)" MayPointsToDomain.pp post in
-    Reporting.log_issue proc_desc err_log ~loc:last_loc LifetimeInference
+    Reporting.log_issue proc_desc err_log ~loc:last_loc MayPointsTo
       IssueType.lab_resource_leak message
 
 

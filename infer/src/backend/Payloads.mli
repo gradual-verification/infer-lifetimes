@@ -22,8 +22,8 @@ include sig
     ; disjunctive_demo: DisjunctiveDemo.domain option
     ; dotnet_resource_leaks: ResourceLeakCSDomain.summary option
     ; lab_resource_leaks: ResourceLeakDomain.summary option
-    ; inferred_lifetimes: MayPointsToDomain.summary option
     ; litho_required_props: LithoDomain.summary option
+    ; may_points_to: MayPointsToDomain.summary option
     ; pulse: PulseSummary.t option
     ; purity: PurityDomain.summary option
     ; quandary: QuandarySummary.t option
