@@ -92,6 +92,7 @@ module MayPointsToMap = struct
     let type_name = Typ.to_string t in
     String.Set.exists visited_structs ~f:(fun nm -> phys_equal type_name nm)
 
+  let strip_ptr (typ: Typ.t) : Typ.t = match typ.desc with | Tptr(inner, _) -> inner | _ -> typ
 
   let rec generate_locations_rec ~(ind : int) (tenv : Tenv.t) (parent : AbstractLocation.t)
       (pair : string * Typ.t) (visited_structs : String.Set.t) :
@@ -113,7 +114,7 @@ module MayPointsToMap = struct
                   prev
                   @
                   let nm, typ, _ = fld in
-                  let inner_typ = Typ.strip_ptr typ in
+                  let inner_typ = strip_ptr typ in
                   if Typ.equal inner_typ typ then []
                   else
                     let next_pair = (Fieldname.to_string nm, inner_typ) in
