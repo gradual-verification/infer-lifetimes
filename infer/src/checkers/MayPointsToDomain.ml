@@ -10,23 +10,44 @@ module F = Format
 
 type indirection = int [@@deriving compare]
 
-type varinfo = string * Typ.t [@@deriving compare]
+type varinfo =
+  | Named of (string * Typ.t)
+  | MaybeUntyped of (string * Typ.t option)
+  | Unnamed of (Typ.t * indirection) option
+[@@deriving compare]
 
+<<<<<<< HEAD
 type abstract_location =
   | Field of (abstract_location option * string)
   | Variable of string
   | HeapMemory of Typ.t option
+=======
+type abstract_location = Variable of varinfo * indirection | Field of (abstract_location * varinfo)
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
 [@@deriving compare]
+
+let string_of_varinfo vi =
+  match vi with
+  | Named (s, _) ->
+      s
+  | MaybeUntyped (s, _) ->
+      s
+  | Unnamed (Some (_, i)) ->
+      "a" ^ string_of_int i
+  | Unnamed None ->
+      "a?"
+
 
 module AbstractLocation : sig
   include PrettyPrintable.PrintableOrderedType
 
-  val generate_all_levels_of_indirection : string * Typ.t -> t list
+  val generate_all_levels_of_indirection : ?ind:int -> string * Typ.t -> t list
 
   val of_base : AccessPath.base -> t option
 
   val of_var_data : ProcAttributes.var_data -> t
 
+<<<<<<< HEAD
   val create_field_offset : t -> Fieldname.t -> t
 end = struct
   type t = abstract_location [@@deriving compare]
@@ -34,26 +55,67 @@ end = struct
   let pp fmt loc =
     let name = match loc with Field (_, nm) -> nm | Variable nm -> nm | HeapMemory _ -> "a" in
     F.fprintf fmt "l_%s" name
+=======
+  val offset_by_field : t -> Typ.t option -> string -> t
+end = struct
+  type t = abstract_location [@@deriving compare]
 
+  let rec format_rec loc : string =
+    match loc with
+    | Field (p, vi) ->
+        format_rec p ^ "." ^ string_of_varinfo vi
+    | Variable (vi, id) ->
+        "l_" ^ string_of_varinfo vi ^ string_of_int id
 
-  let rec generate_all_levels_of_indirection (pair : string * Typ.t) : abstract_location list =
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
+
+  let pp fmt loc = F.fprintf fmt "%s" (format_rec loc)
+
+  let rec generate_all_levels_of_indirection ?(ind = 0) (pair : string * Typ.t) :
+      abstract_location list =
     let var = fst pair in
     let typ = snd pair in
+<<<<<<< HEAD
     [Variable var]
     @ match typ.desc with Tptr (pt, _) -> generate_all_levels_of_indirection (var, pt) | _ -> []
+=======
+    [Variable (Named (var, typ), ind)]
+    @
+    match typ.desc with
+    | Tptr (pt, _) ->
+        [Variable (Named (var, typ), ind)] @ generate_all_levels_of_indirection (var, pt)
+    | _ ->
+        []
 
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
 
+  let of_var_data (vd : ProcAttributes.var_data) =
+    Variable (Named (Mangled.to_string vd.name, vd.typ), 0)
+
+<<<<<<< HEAD
   let of_var_data (vd : ProcAttributes.var_data) = Variable (Mangled.to_string vd.name)
+=======
+
+  let offset_by_field ploc typ fname = Field (ploc, MaybeUntyped (fname, typ))
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
 
   let of_base (b : AccessPath.base) : t option =
     let var = fst b in
     match Var.get_pvar var with
     | Some pv ->
+<<<<<<< HEAD
         Some (Variable (Pvar.get_simplified_name pv))
     | None -> (
       match Var.get_ident var with
       | Some id ->
           Some (Variable (Ident.name_to_string (Ident.get_name id)))
+=======
+        Some (Variable (Named (Pvar.get_simplified_name pv, snd b), 0))
+    | None -> (
+      match Var.get_ident var with
+      | Some id ->
+          Some (Variable (Named (Ident.name_to_string (Ident.get_name id), snd b), 0))
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
       | None ->
           None )
 
@@ -130,7 +192,7 @@ let initial pdesc =
   {sensitive= MayPointsToMap.initial pdesc; insensitive= MayPointsToMap.initial pdesc}
 
 
-let dereference curr map =
+let dereference (curr : AbstractLocationSet.t) (map : MayPointsToMap.t) =
   AbstractLocationSet.fold
     (fun loc s ->
       AbstractLocationSet.union s
@@ -142,6 +204,7 @@ let dereference curr map =
     curr AbstractLocationSet.empty
 
 
+<<<<<<< HEAD
 let resolve_accesses_to_location_set (al : HilExp.access_expression list) curr map =
   let offset_by_field curr nm _tp =
     AbstractLocationSet.map (fun loc -> AbstractLocation.create_field_offset loc nm) curr
@@ -161,10 +224,52 @@ let resolve_accesses_to_location_set (al : HilExp.access_expression list) curr m
         dereference_all next_set map tl
     | [] ->
         curr
+=======
+let field_offset (aex : HilExp.access_expression) (fname : Fieldname.t)
+    (curr : AbstractLocationSet.t) (tenv : Tenv.t) =
+  let accessed_type = HilExp.AccessExpression.get_typ aex tenv in
+  let fieldname = Fieldname.get_field_name fname in
+  AbstractLocationSet.map
+    (fun loc -> AbstractLocation.offset_by_field loc accessed_type fieldname)
+    curr
+
+
+let rec resolve_accesses_to_location_set (al : HilExp.access_expression list) curr map tenv =
+  match al with
+  | hd :: tl -> (
+    match hd with
+    | HilExp.Dereference _ | HilExp.ArrayOffset (_, _, _) ->
+        resolve_accesses_to_location_set tl (dereference curr map) map tenv
+    | HilExp.FieldOffset (_, nm) ->
+        resolve_accesses_to_location_set tl (field_offset hd nm curr tenv) map tenv
+    | HilExp.AddressOf _ ->
+        resolve_accesses_to_location_set tl curr map tenv
+    | _ ->
+        curr )
+  | [] ->
+      curr
+
+
+let rec unfold_access_expr ?(derefs : HilExp.access_expression list = [])
+    (aex : HilExp.access_expression) : HilExp.access_expression list =
+  let drop_last_if_present (to_drop : 'a list) =
+    match List.drop_last to_drop with Some ls -> ls | None -> to_drop
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
   in
-  dereference_all curr map al
+  match aex with
+  | Base _ ->
+      derefs @ [aex]
+  | FieldOffset (inner, _) ->
+      derefs @ unfold_access_expr inner ~derefs:[]
+  | ArrayOffset (inner, _, _) ->
+      unfold_access_expr ~derefs:(derefs @ [inner]) inner
+  | AddressOf inner ->
+      unfold_access_expr inner ~derefs:(drop_last_if_present derefs)
+  | Dereference inner ->
+      unfold_access_expr inner ~derefs:(derefs @ [aex])
 
 
+<<<<<<< HEAD
 let unfold_access_exp (aex : HilExp.access_expression) =
   let rec unfold_access_exp_rec (aex : HilExp.access_expression)
       (derefs : HilExp.access_expression list) (addrofs : HilExp.access_expression list) :
@@ -191,6 +296,31 @@ let unfold_access_exp (aex : HilExp.access_expression) =
 
 
 let get_lhs_locations (map : MayPointsToMap.t) (rhs : HilExp.AccessExpression.t) :
+=======
+(*
+let filter_accesses (al : HilExp.t option HilExp.Access.t list) :
+    HilExp.t option HilExp.Access.t list =
+  let drop_last_if_present (to_drop : 'a list) =
+    match List.drop_last to_drop with Some ls -> ls | None -> to_drop
+  in
+  let rec filter_accesses_rec (al : HilExp.t option HilExp.Access.t list)
+      (derefs : HilExp.t option HilExp.Access.t list) =
+    match al with
+    | hd :: tl -> (
+      match hd with
+      | HilExp.Access.Dereference | HilExp.Access.ArrayAccess (_, _) ->
+          filter_accesses_rec tl (derefs @ [hd])
+      | HilExp.Access.TakeAddress ->
+          filter_accesses_rec tl (drop_last_if_present derefs)
+      | HilExp.Access.FieldAccess _ ->
+          derefs @ filter_accesses_rec tl [] )
+    | [] ->
+        derefs
+  in
+  filter_accesses_rec al [] *)
+
+let get_lhs_locations (map : t) (tenv : Tenv.t) (rhs : HilExp.AccessExpression.t) :
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
     AbstractLocationSet.t option =
   let base = HilExp.AccessExpression.get_base rhs in
   let base_location = AbstractLocation.of_base base in
@@ -198,7 +328,12 @@ let get_lhs_locations (map : MayPointsToMap.t) (rhs : HilExp.AccessExpression.t)
   match base_location with
   | Some loc ->
       let singleton_set = AbstractLocationSet.singleton loc in
+<<<<<<< HEAD
       Some (resolve_accesses_to_location_set unfolded singleton_set map)
+=======
+      let filtered = unfold_access_expr rhs in
+      Some (resolve_accesses_to_location_set filtered singleton_set map tenv)
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
   | None ->
       None
 
@@ -217,7 +352,11 @@ let rec find_inner_access_expr (ex : HilExp.t) =
       None
 
 
+<<<<<<< HEAD
 let get_rhs_locations (map : MayPointsToMap.t) (rhs : HilExp.AccessExpression.t) :
+=======
+let get_rhs_locations (map : t) (tenv : Tenv.t) (rhs : HilExp.AccessExpression.t) :
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
     AbstractLocationSet.t option =
   let base = HilExp.AccessExpression.get_base rhs in
   let base_location = AbstractLocation.of_base base in
@@ -225,11 +364,17 @@ let get_rhs_locations (map : MayPointsToMap.t) (rhs : HilExp.AccessExpression.t)
   match base_location with
   | Some loc ->
       let singleton_set = AbstractLocationSet.singleton loc in
+<<<<<<< HEAD
       Some (dereference (resolve_accesses_to_location_set unfolded singleton_set map) map)
+=======
+      let filtered = unfold_access_expr rhs in
+      Some (resolve_accesses_to_location_set filtered singleton_set map tenv)
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
   | None ->
       None
 
 
+<<<<<<< HEAD
 let set_pointing_to_sensitive (domain : t) (lhs : HilExp.access_expression)
     (rhs : HilExp.access_expression) =
   let map = domain.sensitive in
@@ -270,6 +415,24 @@ let set_pointing_to (domain : t) ~(lhs : HilExp.access_expression) ~(rhs : HilEx
       ; insensitive= set_pointing_to_insensitive domain lhs acc }
   | None ->
       domain
+=======
+let initial (p : Procdesc.t) (_tenv : Tenv.t) : t =
+  let formals =
+    List.map (Procdesc.get_formals p) ~f:(fun pf -> (Mangled.to_string (fst3 pf), snd3 pf))
+  in
+  let locals = Procdesc.get_locals p in
+  let abs_locals = List.map locals ~f:(fun loc -> AbstractLocation.of_var_data loc) in
+  let with_locals =
+    List.fold abs_locals ~init:MayPointsToMap.empty ~f:(fun map loc ->
+        MayPointsToMap.add loc AbstractLocationSet.empty map )
+  in
+  let with_formals =
+    List.fold formals ~init:with_locals ~f:(fun map f ->
+        let gen = AbstractLocation.generate_all_levels_of_indirection f in
+        map_pairs map gen )
+  in
+  with_formals
+>>>>>>> e8c870b55153b13f55ae782d594666616e99f4c9
 
 
 type summary = t
