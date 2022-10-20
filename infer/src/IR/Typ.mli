@@ -305,7 +305,10 @@ val d_list : t list -> unit
 val name : t -> Name.t option
 (** The name of a type *)
 
-val strip_ptr : t -> t
+val strip_ptr: t -> t
+(** turn a *T into a T. if [t] is not a pointer type, it is returned without modification *)
+
+val strip_ptr_exn : t -> t
 (** turn a *T into a T. fails if [t] is not a pointer type *)
 
 val is_ptr_to_ignore_quals : t -> ptr:t -> bool

@@ -720,7 +720,10 @@ let unsome s = function
 
 
 (** turn a *T into a T. fails if [typ] is not a pointer type *)
-let strip_ptr typ = match typ.desc with Tptr (t, _) -> t | _ -> assert false
+let strip_ptr_exn typ = match typ.desc with Tptr (t, _) -> t | _ -> assert false
+
+let strip_ptr typ = match typ.desc with | Tptr(t, _) -> t | _ -> typ
+
 
 let is_ptr_to_ignore_quals t ~ptr =
   match ptr.desc with Tptr (t', _) -> equal_ignore_quals t t' | _ -> false

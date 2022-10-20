@@ -10,12 +10,12 @@ module F = Format
 
 module TransferFunctions (CFG : ProcCfg.S) = struct
   module CFG = CFG
-  module Domain = LifetimeInferenceDomain
+  module Domain = MayPointsToDomain
 
-  type analysis_data = LifetimeInferenceDomain.t InterproceduralAnalysis.t
+  type analysis_data = MayPointsToDomain.t InterproceduralAnalysis.t
 
   (** Take an abstract state and instruction, produce a new abstract state *)
-  let exec_instr (astate : LifetimeInferenceDomain.t)
+  let exec_instr (astate : MayPointsToDomain.t)
       {InterproceduralAnalysis.proc_desc= _; tenv; analyze_dependency= _; _} _ _
       (instr : HilInstr.t) =
     match instr with
@@ -24,7 +24,7 @@ module TransferFunctions (CFG : ProcCfg.S) = struct
         astate
     | Assign (lhs, rhs, _loc) ->
         (* an assignment [lhs_access_path] := [rhs_exp] *)
-        LifetimeInferenceDomain.set_pointing_to astate tenv ~lhs ~rhs
+        MayPointsToDomain.set_pointing_to astate tenv ~lhs ~rhs
     | Assume (_assume_exp, _, _, _loc) ->
         (* a conditional assume([assume_exp]). blocks if [assume_exp] evaluates to false *)
         astate
@@ -43,14 +43,19 @@ module CFG = ProcCfg.Normal
 (* Create an intraprocedural abstract interpreter from the transfer functions we defined *)
 module Analyzer = LowerHil.MakeAbstractInterpreter (TransferFunctions (CFG))
 
-(** Report an error when we have acquired more resources than we have released *)
-let report_annotation_or_error _ _post = ()
 
+let report_annotation_or_error {InterproceduralAnalysis.proc_desc; err_log; _} post = 
+  let _sensitive = MayPointsToDomain.sensitive post in
+  let last_loc = Procdesc.Node.get_loc (Procdesc.get_start_node proc_desc) in
+  let parameters = Procdesc.get_formals proc_desc in
+  let lifetime_contract = List.fold parameters ~init:"" ~f:(fun str _param -> str^"\n") in
+  Reporting.log_issue proc_desc err_log ~loc:last_loc LifetimeInference
+  IssueType.lifetime_error lifetime_contract
 
 (** Main function into the checker--registered in RegisterCheckers *)
 let checker ({InterproceduralAnalysis.proc_desc; tenv} as analysis_data) =
   let result =
-    Analyzer.compute_post analysis_data ~initial:(LifetimeInferenceDomain.initial proc_desc tenv) proc_desc
+    Analyzer.compute_post analysis_data ~initial:(MayPointsToDomain.initial proc_desc tenv) proc_desc
   in
   Option.iter result ~f:(fun post -> report_annotation_or_error analysis_data post) ;
   result
