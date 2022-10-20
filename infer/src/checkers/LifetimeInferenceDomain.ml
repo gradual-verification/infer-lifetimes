@@ -87,15 +87,15 @@ module MayPointsToMap = struct
     | [] ->
         map
 
+  module TypeSet = Set.Make(Typ)
 
-  let already_visited (t : Typ.t) (visited_structs : String.Set.t) : bool =
-    let type_name = Typ.to_string t in
-    String.Set.exists visited_structs ~f:(fun nm -> phys_equal type_name nm)
+  let already_visited (t : Typ.t) (visited_structs : TypeSet.t) : bool =
+    TypeSet.exists visited_structs ~f:(fun str -> Typ.equal t str)
 
   let strip_ptr (typ: Typ.t) : Typ.t = match typ.desc with | Tptr(inner, _) -> inner | _ -> typ
 
   let rec generate_locations_rec ~(ind : int) (tenv : Tenv.t) (parent : AbstractLocation.t)
-      (pair : string * Typ.t) (visited_structs : String.Set.t) :
+      (pair : string * Typ.t) (visited_structs : TypeSet.t) :
       ( AbstractLocation.t *  AbstractLocation.t) list =
     let vname, vtype = pair in
     let next_loc = AbstractLocation.create_variable vname vtype ind in
@@ -106,7 +106,7 @@ module MayPointsToMap = struct
     | Tstruct nm -> (
         if already_visited vtype visited_structs then []
         else
-          let struct_recorded = String.Set.add visited_structs (Typ.to_string vtype) in
+          let struct_recorded = TypeSet.add visited_structs vtype in
           let found_defn_opt = Tenv.lookup tenv nm in
           match found_defn_opt with
           | Some strct ->
@@ -135,7 +135,7 @@ module MayPointsToMap = struct
     let vname, vtype = pair in
     let ind = 0 in
     let initial_location = AbstractLocation.create_variable vname vtype ind in
-    let initial_struct_set = String.Set.empty in
+    let initial_struct_set = TypeSet.empty in
     generate_locations_rec ~ind tenv initial_location pair initial_struct_set
 
 
