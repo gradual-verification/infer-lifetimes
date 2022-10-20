@@ -11,7 +11,8 @@ module AbstractLocationSet : sig
   include AbstractDomain.FiniteSetS
 
   val singleton : AbstractLocation.t -> t
-
+  
+  val to_list: t -> AbstractLocation.t list
 end
 
 module MayPointsToMap : sig

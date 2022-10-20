@@ -1,10 +1,10 @@
 open! IStd
 
-type indirection = int [@@deriving compare]
+type indirection = int [@@deriving compare, equal]
 
-type varinfo = string * Typ.t * indirection [@@deriving compare]
+type varinfo = string * Typ.t * indirection [@@deriving compare, equal]
 
-type t = Field of (t * varinfo) | Variable of varinfo | HeapMemory of Typ.t [@@deriving compare]
+type t = Field of (t * varinfo) | Variable of varinfo | HeapMemory of Typ.t [@@deriving compare, equal]
 
 val of_base : AccessPath.base -> t option
 

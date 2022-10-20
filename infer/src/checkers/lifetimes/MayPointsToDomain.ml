@@ -3,8 +3,10 @@ open! IStd
 
 module AbstractLocationSet = struct
   include AbstractDomain.FiniteSet (AbstractLocation)
-
+  
   let singleton loc = add loc empty
+
+  let to_list set : AbstractLocation.t list = fold (fun (elt:AbstractLocation.t) ls -> ls @ [elt]) set []
 end
 
 module MayPointsToMap = struct

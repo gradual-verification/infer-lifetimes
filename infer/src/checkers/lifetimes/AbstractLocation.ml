@@ -1,16 +1,16 @@
 open! IStd
 module F = Format
 
-type indirection = int [@@deriving compare]
+type indirection = int [@@deriving compare, equal]
 
-type varinfo = string * Typ.t * indirection [@@deriving compare]
+type varinfo = string * Typ.t * indirection [@@deriving compare, equal]
 
 let string_of_varinfo vi =
   let n, t, i = vi in
   n ^ string_of_int i ^ ":" ^ Typ.to_string t
 
 
-type t = Field of (t * varinfo) | Variable of varinfo | HeapMemory of Typ.t [@@deriving compare]
+type t = Field of (t * varinfo) | Variable of varinfo | HeapMemory of Typ.t [@@deriving compare, equal]
 
 let pp fmt loc =
   let name =
