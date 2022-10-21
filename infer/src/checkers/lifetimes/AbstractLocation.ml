@@ -29,28 +29,28 @@ let type_of loc =
   match loc with Variable (_, tp, _) -> tp | Field (_, (_, tp, _)) -> tp | HeapMemory tp -> tp
 
 
-let create_loc_for_field_offset loc nm typ = Field (loc, (Fieldname.get_field_name nm, typ, 0))
+let create_loc_for_field_offset ?(ind = 0) loc nm typ = Field (loc, (Fieldname.get_field_name nm, typ, ind))
 
-let create_loc_for_variable nm typ ind = Variable (nm, typ, ind)
+let create_loc_for_variable ?(ind = 0) nm typ = Variable (nm, typ, ind)
 
 let create_loc_for_formal formal =
   let nm, tp, _ = formal in
   let fname = Mangled.to_string nm in
-  create_loc_for_variable fname tp 0
+  create_loc_for_variable fname tp
 
 
 let of_var_data (vd : ProcAttributes.var_data) =
-  create_loc_for_variable (Mangled.to_string vd.name) vd.typ 0
+  create_loc_for_variable (Mangled.to_string vd.name) vd.typ 
 
 
 let of_base (b : AccessPath.base) : t option =
   let var, typ = b in
   match Var.get_pvar var with
   | Some pv ->
-      Some (create_loc_for_variable (Pvar.get_simplified_name pv) typ 0)
+      Some (create_loc_for_variable (Pvar.get_simplified_name pv) typ)
   | None -> (
     match Var.get_ident var with
     | Some id ->
-        Some (create_loc_for_variable (Ident.name_to_string (Ident.get_name id)) typ 0)
+        Some (create_loc_for_variable (Ident.name_to_string (Ident.get_name id)) typ)
     | None ->
         None )

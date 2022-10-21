@@ -10,9 +10,9 @@ val of_base : AccessPath.base -> t option
 
 val of_var_data : ProcAttributes.var_data -> t
 
-val create_loc_for_field_offset : t -> Fieldname.t -> Typ.t -> t
+val create_loc_for_field_offset :  ?ind:int -> t -> Fieldname.t -> Typ.t -> t
 
-val create_loc_for_variable : string -> Typ.t -> int -> t
+val create_loc_for_variable : ?ind:int -> string -> Typ.t ->  t
 
 val create_loc_for_formal : Mangled.t * Typ.t * Annot.Item.t -> t
 

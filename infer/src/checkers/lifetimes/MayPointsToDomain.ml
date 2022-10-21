@@ -1,18 +1,20 @@
 open! IStd
-
+module F = Format
 
 module AbstractLocationSet = struct
   include AbstractDomain.FiniteSet (AbstractLocation)
-  
+
   let singleton loc = add loc empty
 
-  let to_list set : AbstractLocation.t list = fold (fun (elt:AbstractLocation.t) ls -> ls @ [elt]) set []
+  let to_list set : AbstractLocation.t list =
+    fold (fun (elt : AbstractLocation.t) ls -> ls @ [elt]) set []
 end
 
 module MayPointsToMap = struct
   module PtsToMap = AbstractDomain.Map (AbstractLocation) (AbstractLocationSet)
   include PtsToMap
   module TypeSet = Set.Make (Typ)
+
   let widen ~(prev : t) ~(next : t) ~num_iters:_ = join prev next
 
   let rec map_pairs (map : PtsToMap.t) (tlist : (AbstractLocation.t * AbstractLocation.t) list) :
@@ -29,11 +31,11 @@ module MayPointsToMap = struct
     TypeSet.exists visited_structs ~f:(fun str -> Typ.equal t str)
 
 
-  let rec populate_locations_rec ~(ind : int) (tenv : Tenv.t) (parent : AbstractLocation.t)
+  let rec populate_locations_rec ~(ind:int) (tenv : Tenv.t) (parent : AbstractLocation.t)
       (pair : string * Typ.t) (visited_structs : TypeSet.t) :
       (AbstractLocation.t * AbstractLocation.t) list =
     let vname, vtype = pair in
-    let next_loc = AbstractLocation.create_loc_for_variable vname vtype ind in
+    let next_loc = AbstractLocation.create_loc_for_variable ~ind vname vtype in
     let next_link = [(parent, next_loc)] in
     next_link
     @
@@ -60,7 +62,9 @@ module MayPointsToMap = struct
           | None ->
               [] )
     | Tarray ct ->
-        let inner_array_loc = AbstractLocation.create_loc_for_variable vname ct.elt (ind + 1) in
+        let inner_array_loc =
+          AbstractLocation.create_loc_for_variable vname ct.elt ~ind:(ind + 1)
+        in
         [(next_loc, inner_array_loc)]
     | Tptr (pt, _) ->
         populate_locations_rec ~ind:(ind + 1) tenv next_loc (vname, pt) visited_structs
@@ -70,10 +74,9 @@ module MayPointsToMap = struct
 
   let populate_locations (tenv : Tenv.t) (pair : string * Typ.t) =
     let vname, vtype = pair in
-    let ind = 0 in
-    let initial_location = AbstractLocation.create_loc_for_variable vname vtype ind in
+    let initial_location = AbstractLocation.create_loc_for_variable vname vtype in
     let initial_struct_set = TypeSet.empty in
-    populate_locations_rec ~ind tenv initial_location pair initial_struct_set
+    populate_locations_rec ~ind:0 tenv initial_location pair initial_struct_set
 
 
   let initial (p : Procdesc.t) (tenv : Tenv.t) : PtsToMap.t =
@@ -124,7 +127,9 @@ let widen ~(prev : t) ~(next : t) ~(num_iters : int) =
 
 
 let pp fmt st =
+  F.fprintf fmt "SENSITIVE:\n" ;
   MayPointsToMap.pp fmt st.sensitive ;
+  F.fprintf fmt "\n\n INSENSITIVE:\n" ;
   MayPointsToMap.pp fmt st.insensitive
 
 
@@ -162,7 +167,7 @@ let unfold_access_exp (aex : HilExp.access_expression) =
       HilExp.access_expression list =
     match aex with
     | Base _ ->
-        [aex]
+        derefs @ addrofs @[aex]
     | FieldOffset (inner, _) ->
         (derefs @ addrofs) @ [aex] @ unfold_access_exp_rec inner [] []
     | AddressOf inner ->
@@ -181,17 +186,21 @@ let unfold_access_exp (aex : HilExp.access_expression) =
   unfold_access_exp_rec aex [] []
 
 
-let get_lhs_locations (map : MayPointsToMap.t) (tenv : Tenv.t) (rhs : HilExp.AccessExpression.t) :
-    AbstractLocationSet.t option =
-  let base = HilExp.AccessExpression.get_base rhs in
+let get_locations (acc : HilExp.access_expression) (tenv : Tenv.t) (map : MayPointsToMap.t) =
+  let base = HilExp.AccessExpression.get_base acc in
   let base_location = AbstractLocation.of_base base in
-  let unfolded = unfold_access_exp rhs in
+  let unfolded = unfold_access_exp acc in
   match base_location with
   | Some loc ->
       let singleton_set = AbstractLocationSet.singleton loc in
       Some (resolve_accesses_to_location_set unfolded tenv singleton_set map)
   | None ->
       None
+
+
+let get_lhs_locations (map : MayPointsToMap.t) (tenv : Tenv.t) (lhs : HilExp.AccessExpression.t) :
+    AbstractLocationSet.t option =
+  get_locations lhs tenv map
 
 
 let rec find_inner_access_expr (ex : HilExp.t) =
@@ -211,21 +220,7 @@ let rec find_inner_access_expr (ex : HilExp.t) =
 let get_rhs_locations (map : MayPointsToMap.t) (tenv : Tenv.t) (rhs : HilExp.t) :
     AbstractLocationSet.t option =
   let rhs_aexp_opt = find_inner_access_expr rhs in
-  match rhs_aexp_opt with
-  | Some rexp -> (
-      let base = HilExp.AccessExpression.get_base rexp in
-      let base_location = AbstractLocation.of_base base in
-      let unfolded = unfold_access_exp rexp in
-      match base_location with
-      | Some loc ->
-          let singleton_set = AbstractLocationSet.singleton loc in
-          Some
-            (MayPointsToMap.dereference map
-               (resolve_accesses_to_location_set unfolded tenv singleton_set map) )
-      | None ->
-          None )
-  | None ->
-      None
+  match rhs_aexp_opt with Some rexp -> get_locations rexp tenv map | None -> None
 
 
 let set_pointing_to_sensitive (domain : t) (tenv : Tenv.t) (lhs : HilExp.access_expression)
@@ -235,8 +230,24 @@ let set_pointing_to_sensitive (domain : t) (tenv : Tenv.t) (lhs : HilExp.access_
   let rhs_pts_to_set = get_rhs_locations map tenv rhs in
   match (lhs_pts_to_set, rhs_pts_to_set) with
   | Some l, Some r ->
-      AbstractLocationSet.fold (fun loc map -> MayPointsToMap.add loc r map) l map
+      let dereferenced_rhs = MayPointsToMap.dereference map r in
+      AbstractLocationSet.fold (fun loc map -> MayPointsToMap.add loc dereferenced_rhs map) l map
   | _ ->
+      map
+
+
+let rec unify_rec ptrs new_ptees map =
+  let ptr_chosen_opt = AbstractLocationSet.choose_opt ptrs in
+  match ptr_chosen_opt with
+  | Some ptr ->
+      let curr_ptees = MayPointsToMap.get_pointing_to map ptr in
+      let updated_ptees = AbstractLocationSet.union new_ptees curr_ptees in
+      let next_ptees = MayPointsToMap.dereference map updated_ptees in
+      let updated_map =
+        AbstractLocationSet.fold (fun loc map -> MayPointsToMap.add loc updated_ptees map) ptrs map
+      in
+      unify_rec updated_ptees next_ptees updated_map
+  | None ->
       map
 
 
@@ -247,15 +258,8 @@ let set_pointing_to_insensitive (domain : t) (tenv : Tenv.t) (lhs : HilExp.acces
   let rhs_pts_to_set = get_rhs_locations map tenv rhs in
   match (lhs_pts_to_set, rhs_pts_to_set) with
   | Some l, Some r ->
-      AbstractLocationSet.fold
-        (fun loc map ->
-          let current_opt = MayPointsToMap.find_opt loc map in
-          match current_opt with
-          | Some curr ->
-              MayPointsToMap.add loc (AbstractLocationSet.union r curr) map
-          | None ->
-              MayPointsToMap.add loc l map )
-        l map
+      let dereferenced_rhs = MayPointsToMap.dereference map r in
+      unify_rec l dereferenced_rhs map
   | _ ->
       map
 

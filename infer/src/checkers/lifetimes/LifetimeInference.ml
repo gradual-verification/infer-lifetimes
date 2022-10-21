@@ -47,10 +47,9 @@ module Analyzer = LowerHil.MakeAbstractInterpreter (TransferFunctions (CFG))
 let report_annotation_or_error {InterproceduralAnalysis.proc_desc; err_log; _} post = 
   let _sensitive = MayPointsToDomain.sensitive post in
   let last_loc = Procdesc.Node.get_loc (Procdesc.get_start_node proc_desc) in
-  let parameters = Procdesc.get_formals proc_desc in
-  let lifetime_contract = List.fold parameters ~init:"" ~f:(fun str _param -> str^"\n") in
+  let constraints = LifetimeConstraintSet.generate_constraints proc_desc post in
   Reporting.log_issue proc_desc err_log ~loc:last_loc LifetimeInference
-  IssueType.lifetime_error lifetime_contract
+  IssueType.lifetime_error constraints
 
 (** Main function into the checker--registered in RegisterCheckers *)
 let checker ({InterproceduralAnalysis.proc_desc; tenv} as analysis_data) =
