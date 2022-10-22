@@ -7,7 +7,7 @@ type t =
   | Heap
 [@@deriving compare, equal]
 
-let variables_of_formal (p : Mangled.t * Typ.t * Annot.Item.t) =
+let of_formal (p : Mangled.t * Typ.t * Annot.Item.t) =
   let mname, typ, _ = p in
   let actual_name = Mangled.to_string mname in
   let rec generate_lt_variables ?(ind = 0) (root_name:string) (curr_typ:Typ.t) =

@@ -27,12 +27,11 @@ let _add_equality_constraint cst ~(lhs:LifetimeVariable.t) ~(rhs:LifetimeVariabl
     | (set, _) -> set)
   }
 
-
 let _constrain_formal mptsto cset (formal:(Mangled.t * Typ.t * Annot.Item.t)) = 
   let (_, tp, _) = formal in 
   match tp.desc with
   | Tptr(_, _) -> (
-    let _lifetime_vars = LifetimeVariable.variables_of_formal formal in
+    let _lifetime_vars = LifetimeVariable.of_formal in
     let base_location = AbstractLocation.create_loc_for_formal formal in
     let _pointing_to = MayPointsToMap.get_pointing_to mptsto base_location in cset
     (* traverse_constrain mptsto cset lthd lttl loc_set *)

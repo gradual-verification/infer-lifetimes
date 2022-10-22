@@ -161,35 +161,13 @@ let resolve_accesses_to_location_set (al : HilExp.access_expression list) (tenv 
   dereference_all map curr al
 
 
-let unfold_access_exp (aex : HilExp.access_expression) =
-  let rec unfold_access_exp_rec (aex : HilExp.access_expression)
-      (derefs : HilExp.access_expression list) (addrofs : HilExp.access_expression list) :
-      HilExp.access_expression list =
-    match aex with
-    | Base _ ->
-        derefs @ addrofs @[aex]
-    | FieldOffset (inner, _) ->
-        (derefs @ addrofs) @ [aex] @ unfold_access_exp_rec inner [] []
-    | AddressOf inner ->
-        if List.length derefs > 0 then
-          unfold_access_exp_rec inner (List.drop_last_exn derefs) addrofs
-        else unfold_access_exp_rec inner derefs (addrofs @ [aex])
-    | Dereference inner ->
-        if List.length addrofs > 0 then
-          unfold_access_exp_rec inner derefs (List.drop_last_exn addrofs)
-        else unfold_access_exp_rec inner (derefs @ [aex]) addrofs
-    | ArrayOffset (inner, _, _) ->
-        if List.length addrofs > 0 then
-          unfold_access_exp_rec inner derefs (List.drop_last_exn addrofs)
-        else unfold_access_exp_rec inner (derefs @ [aex]) addrofs
-  in
-  unfold_access_exp_rec aex [] []
+
 
 
 let get_locations (acc : HilExp.access_expression) (tenv : Tenv.t) (map : MayPointsToMap.t) =
   let base = HilExp.AccessExpression.get_base acc in
   let base_location = AbstractLocation.of_base base in
-  let unfolded = unfold_access_exp acc in
+  let unfolded = LifetimeUtils.unfold_access_exp acc in
   match base_location with
   | Some loc ->
       let singleton_set = AbstractLocationSet.singleton loc in
@@ -203,23 +181,12 @@ let get_lhs_locations (map : MayPointsToMap.t) (tenv : Tenv.t) (lhs : HilExp.Acc
   get_locations lhs tenv map
 
 
-let rec find_inner_access_expr (ex : HilExp.t) =
-  match ex with
-  | HilExp.AccessExpression acc ->
-      Some acc
-  | HilExp.UnaryOperator (_, inner, _) ->
-      find_inner_access_expr inner
-  | HilExp.BinaryOperator (op, l, _) -> (
-    match op with Binop.MinusPI | Binop.PlusPI -> find_inner_access_expr l | _ -> None )
-  | HilExp.Cast (_, inner) ->
-      find_inner_access_expr inner
-  | _ ->
-      None
+
 
 
 let get_rhs_locations (map : MayPointsToMap.t) (tenv : Tenv.t) (rhs : HilExp.t) :
     AbstractLocationSet.t option =
-  let rhs_aexp_opt = find_inner_access_expr rhs in
+  let rhs_aexp_opt = LifetimeUtils.find_inner_access_exp rhs in
   match rhs_aexp_opt with Some rexp -> get_locations rexp tenv map | None -> None
 
 

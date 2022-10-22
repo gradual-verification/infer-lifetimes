@@ -2,7 +2,7 @@ open! IStd
 
 type t = Local | StructLocal of string | NonLocal of (string * AbstractLocation.indirection * bool) | Heap [@@deriving compare, equal]
     
-val variables_of_formal : Mangled.t * Typ.t * Annot.Item.t -> t list
+val of_formal : Mangled.t * Typ.t * Annot.Item.t -> t list
 
 val string_of : t -> string
 
