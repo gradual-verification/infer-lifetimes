@@ -1,7 +1,12 @@
 open! IStd
 
-type t
 
-val initial : t
+module Env : sig
+    type t
+    val initial : t
+    
+    val constrain: lhs:HilExp.access_expression -> rhs:HilExp.t -> constr:t -> unit
 
-val generate_constraints : Procdesc.t -> MayPointsToDomain.t -> string
+    val pp : Format.formatter -> t -> unit
+
+end

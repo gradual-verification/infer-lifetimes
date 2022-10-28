@@ -44,12 +44,8 @@ module CFG = ProcCfg.Normal
 module Analyzer = LowerHil.MakeAbstractInterpreter (TransferFunctions (CFG))
 
 
-let report_annotation_or_error {InterproceduralAnalysis.proc_desc; err_log; _} post = 
-  let _sensitive = MayPointsToDomain.sensitive post in
-  let last_loc = Procdesc.Node.get_loc (Procdesc.get_start_node proc_desc) in
-  let constraints = LifetimeConstraintSet.generate_constraints proc_desc post in
-  Reporting.log_issue proc_desc err_log ~loc:last_loc LifetimeInference
-  IssueType.lifetime_error constraints
+let report_annotation_or_error _ _post = 
+()
 
 (** Main function into the checker--registered in RegisterCheckers *)
 let checker ({InterproceduralAnalysis.proc_desc; tenv} as analysis_data) =

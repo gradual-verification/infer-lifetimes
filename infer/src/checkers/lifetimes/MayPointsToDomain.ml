@@ -181,9 +181,6 @@ let get_lhs_locations (map : MayPointsToMap.t) (tenv : Tenv.t) (lhs : HilExp.Acc
   get_locations lhs tenv map
 
 
-
-
-
 let get_rhs_locations (map : MayPointsToMap.t) (tenv : Tenv.t) (rhs : HilExp.t) :
     AbstractLocationSet.t option =
   let rhs_aexp_opt = LifetimeUtils.find_inner_access_exp rhs in
